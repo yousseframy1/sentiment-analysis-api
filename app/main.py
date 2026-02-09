@@ -1,8 +1,16 @@
 from fastapi import FastAPI
 from app.model_utils import load_model, predict_sentiment
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Sentiment Analysis API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 vectorizer, classifier = load_model()
 
