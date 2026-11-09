@@ -1,69 +1,64 @@
 # Sentiment Analysis API
 
-End-to-end machine learning project demonstrating training, evaluation, serialization, and serving of a sentiment classification model as a REST API.
+Type a movie review, get back **positive** or **negative** with a confidence score.
 
-## Features
-- FastAPI backend
-- Trained on Hugging Face IMDB dataset (50,000 movie reviews)
-- **88.26% accuracy** using Logistic Regression with TF-IDF features
-- Simple web interface for testing
-- Confusion matrix evaluation
+A small but complete machine learning pipeline: train, evaluate, save, serve.
 
-## Tech Stack
-- Python 3.12.3
-- FastAPI
-- scikit-learn
-- TF-IDF Vectorization
-- Logistic Regression
+**Result: 88.26% accuracy on 25,000 reviews the model never saw during training.**
 
-## Setup
+## How it works
 
-### Prerequisites
-- Python 3.10+
-- pip
-
-### Installation
-
-1. Clone the repository:
-
-2. Install dependencies:
-```bash
-   pip install -r requirements.txt
+```mermaid
+flowchart LR
+    A["IMDB reviews<br/>25,000 train / 25,000 test"] --> B["TF-IDF<br/>text to 5,000 numbers"]
+    B --> C["Logistic Regression<br/>learns which words matter"]
+    C --> D[("Saved model<br/>model/*.pkl")]
+    D --> E["FastAPI<br/>POST /predict"]
+    E --> F["Web page"]
 ```
 
-3. Train the model:
+**Step 1: turn text into numbers (TF-IDF).** A classifier cannot read words, so each review becomes a list of 5,000 numbers, one per word in the vocabulary (the 5,000 most frequent words in the training reviews). A word scores high when it appears often in *this* review but rarely across all reviews. So "the" scores low and "terrible" scores high.
+
+**Step 2: learn from labelled examples (Logistic Regression).** The model learns a weight for each word: "awful" pushes toward negative, "brilliant" pushes toward positive. For a new review it adds up the weights and converts the total into a probability. That probability is the confidence you see.
+
+## Results
+
+Evaluated on the 25,000 held-out test reviews:
+
+| | Predicted negative | Predicted positive |
+|---|---:|---:|
+| **Actually negative** | 11,012 | 1,488 |
+| **Actually positive** | 1,446 | 11,054 |
+
+22,066 of 25,000 correct. The two kinds of mistake are almost equal (1,488 vs 1,446), so the model is not biased toward either sentiment.
+
+## Run it
+
+You need Python 3.10+.
+
 ```bash
-   jupyter notebook notebooks/train_model.ipynb
-   # Run all cells to generate model files
+git clone https://github.com/yousseframy1/sentiment-analysis-api.git
+cd sentiment-analysis-api
+
+pip install -r requirements.txt
+pip install notebook
+
+jupyter notebook notebooks/train_model.ipynb    # run all cells: trains and saves the model
+uvicorn app.main:app --reload
 ```
 
-4. Run the API:
-```bash
-   uvicorn app.main:app --reload
-```
+The trained model files are not stored in the repository, so run the notebook once before starting the API. Then open `frontend/index.html` in your browser, or try the API at `http://localhost:8000/docs`.
 
-5. Open the web interface:
-   - Open `frontend/index.html` in your browser
-   - Or visit API docs at `http://localhost:8000/docs`
+## API
 
-## API Documentation
+**`POST /predict`**
 
-### Endpoints
-
-#### `GET /`
-Returns API status message.
-
-#### `POST /predict`
-Predicts sentiment of input text.
-
-**Request Body:**
 ```json
-{
-  "text": "This movie was amazing!"
-}
+{ "text": "This movie was amazing!" }
 ```
 
-**Response:**
+Example response (the exact confidence will vary):
+
 ```json
 {
   "text": "This movie was amazing!",
@@ -72,25 +67,34 @@ Predicts sentiment of input text.
 }
 ```
 
-## Model Details
+`GET /` returns a status message.
 
-- **Algorithm**: Logistic Regression
-- **Features**: TF-IDF
-- **Training Data**: Hugging Face IMDB Movie Reviews
-- **Test Accuracy**: 88.26%
-- **Evaluation**: Confusion matrix
+## Limitations
 
-## What I Learned
+- **Ignores word order.** The model sees a bag of words, so negation and sarcasm ("not good", "what a masterpiece, I fell asleep") can fool it.
+- **Movie reviews only.** It learned from IMDB, so expect weaker results on other kinds of text.
+- **Two classes.** There is no "neutral" label.
+- **Pickle files.** Only load model files you created yourself, and use the pinned `scikit-learn` version, since pickles can break across versions.
 
-- Building end-to-end ML projects from training to deployment
-- FastAPI framework
-- Model serialization with pickle
-- CORS configuration for web applications
-- Linking the frontend with the API
-- Git workflow and version control best practices
+## Possible improvements
+
+- Include word pairs (n-grams) so phrases like "not good" are captured
+- Compare against other models and report the results side by side
+- Add automated tests for the API
+- Package it with Docker so it runs the same everywhere
+
+## Project layout
+
+```
+notebooks/train_model.ipynb   loads data, trains, evaluates, saves the model
+app/model_utils.py            loads the model and makes predictions
+app/main.py                   FastAPI endpoints
+frontend/index.html           minimal test page
+model/                        saved model (created by the notebook, not committed)
+```
+
+**Built with:** Python, FastAPI, scikit-learn, Hugging Face `datasets`
 
 ## Contact
 
-youssef ramy - yousseframy200@gmail.com
-
-Project Link: https://github.com/yousseframy1/sentiment-analysis-api
+Youssef Ramy · yousseframy200@gmail.com · [GitHub](https://github.com/yousseframy1) · [LinkedIn](https://www.linkedin.com/in/youssef-ramy-73a21a305/)
